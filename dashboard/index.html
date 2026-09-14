@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Cost Optimization Dashboard</title>
+    <!-- Modern typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for beautiful charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-mode">
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-logo">
+                    <i class="fa-solid fa-server-dns brand-icon"></i>
+                </div>
+                <h2>FinOps<span>Optima</span></h2>
+            </div>
+            <nav class="sidebar-menu">
+                <ul>
+                    <li class="active" data-tab="overview">
+                        <a href="#overview"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></a>
+                    </li>
+                    <li data-tab="findings">
+                        <a href="#findings"><i class="fa-solid fa-triangle-exclamation"></i><span>Active Waste</span></a>
+                    </li>
+                    <li data-tab="history">
+                        <a href="#history"><i class="fa-solid fa-clock-rotate-left"></i><span>Action History</span></a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="env-badge" id="envBadge">
+                    <span class="pulse-dot"></span>
+                    <span id="envText">AWS Live Mode</span>
+                </div>
+                <button class="theme-toggle" id="themeToggleBtn">
+                    <i class="fa-solid fa-sun light-icon"></i>
+                    <i class="fa-solid fa-moon dark-icon"></i>
+                    <span>Toggle Theme</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="app-header">
+                <div class="header-title">
+                    <h1>AWS Cost Optimization</h1>
+                    <p>Daily serverless scanning, analysis, and automated resource remediation</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" id="refreshBtn">
+                        <i class="fa-solid fa-arrows-rotate"></i> Sync Findings
+                    </button>
+                    <button class="btn btn-primary" id="triggerScanBtn">
+                        <i class="fa-solid fa-bolt"></i> Trigger Scan Run
+                    </button>
+                </div>
+            </header>
+
+            <!-- Overview Tab -->
+            <section class="tab-content" id="overview-tab">
+                <!-- KPI Row -->
+                <div class="kpi-grid">
+                    <div class="kpi-card savings-card">
+                        <div class="kpi-icon-wrapper">
+                            <i class="fa-solid fa-dollar-sign"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3>Total Est. Monthly Savings</h3>
+                            <h2 id="totalSavings">$0.00</h2>
+                            <p class="positive-trend"><i class="fa-solid fa-arrow-down"></i> Potential waste reduction</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card waste-card">
+                        <div class="kpi-icon-wrapper">
+                            <i class="fa-solid fa-circle-exclamation"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3>Active Waste Items</h3>
+                            <h2 id="activeCount">0</h2>
+                            <p class="warning-text" id="urgentText">Awaiting FinOps review</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card rate-card">
+                        <div class="kpi-icon-wrapper">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <h3>Remediation Rate</h3>
+                            <h2 id="remediationRate">0%</h2>
+                            <p class="neutral-trend"><span id="remediatedCount">0</span> of <span id="totalLoggedCount">0</span> items resolved</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts & Stats Grid -->
+                <div class="dashboard-grid">
+                    <div class="chart-container card">
+                        <div class="card-header">
+                            <h3>Savings Breakdown by Service</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-wrapper">
+                                <canvas id="savingsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="quick-summary card">
+                        <div class="card-header">
+                            <h3>Top Remediation Candidates</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="candidate-list" id="candidateList">
+                                <!-- Populated dynamically -->
+                                <div class="empty-state">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                    <p>No active remediation candidates!</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Active Waste Tab -->
+            <section class="tab-content hidden" id="findings-tab">
+                <div class="card filter-card">
+                    <div class="filter-bar">
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="searchInput" placeholder="Search by Resource ID, name or details...">
+                        </div>
+                        <div class="filters">
+                            <button class="filter-btn active" data-filter="all">All</button>
+                            <button class="filter-btn" data-filter="EC2">EC2</button>
+                            <button class="filter-btn" data-filter="EBS">EBS</button>
+                            <button class="filter-btn" data-filter="EIP">EIP</button>
+                            <button class="filter-btn" data-filter="RDS">RDS</button>
+                            <button class="filter-btn" data-filter="S3">S3</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card findings-card">
+                    <div class="card-header">
+                        <h3>Waste Findings Registry</h3>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Resource ID</th>
+                                    <th>Service Type</th>
+                                    <th>Est. Monthly Savings</th>
+                                    <th>Detected Date</th>
+                                    <th>Metrics / Configuration</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="findingsTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Action History Tab -->
+            <section class="tab-content hidden" id="history-tab">
+                <div class="card history-card">
+                    <div class="card-header">
+                        <h3>Remediation Action log</h3>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Resource ID</th>
+                                    <th>Service Type</th>
+                                    <th>Savings Secured</th>
+                                    <th>Timestamp</th>
+                                    <th>Resolution</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Remediation Confirmation Modal -->
+    <div class="modal-overlay hidden" id="confirmModal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3>Approve Remediation Action</h3>
+                <button class="close-modal-btn" id="closeModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="warning-icon-large">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                </div>
+                <h4>Are you sure you want to stop this resource?</h4>
+                <p>This action will initiate the remediation handler to automatically stop/remediate the resource and update its status. This is non-destructive (resource will not be terminated).</p>
+                <div class="resource-summary-box">
+                    <div class="summary-row">
+                        <span class="label">Resource ID:</span>
+                        <strong id="modalResourceId">i-0a2b3c4d5e6f7g8h9</strong>
+                    </div>
+                    <div class="summary-row">
+                        <span class="label">Resource Type:</span>
+                        <strong id="modalResourceType">EC2</strong>
+                    </div>
+                    <div class="summary-row">
+                        <span class="label">Estimated Savings:</span>
+                        <strong class="green-text" id="modalSavings">$62.00/mo</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modalRejectBtn">Reject & Ignore</button>
+                <button class="btn btn-primary" id="modalApproveBtn">Approve & Remediate</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

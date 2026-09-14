@@ -1,0 +1,40 @@
+# Build output
+target/
+
+# IDE
+.classpath
+.project
+.settings/
+.idea/
+*.iml
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local runtime data
+scripts/findings_db.json
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+*.tfvars
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+
+# Logs
+*.log
